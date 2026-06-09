@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNotebook } from "./useNotebook";
-import { createBlock, toggleBlock, deleteBlock, updateBlock, type Block } from "./api";
+import { createBlock, toggleBlock, deleteBlock, updateBlock, type Block } from "./client";
 
 export function App() {
   const { blocks, connected, animating, settle } = useNotebook();

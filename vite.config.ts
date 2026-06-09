@@ -15,7 +15,9 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      "/api": "http://localhost:8788",
+      // Regex key (leading ^) so it matches `/api/...` routes only — NOT the
+      // UI's own `api.ts` module, which Vite must serve itself.
+      "^/api/": { target: "http://localhost:8788", changeOrigin: true },
       "/ws": { target: "ws://localhost:8788", ws: true },
     },
   },

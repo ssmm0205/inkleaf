@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import type { Block } from "./api";
+import type { Block } from "./client";
 
 interface SnapshotMsg {
   type: "snapshot";
