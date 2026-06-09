@@ -1,0 +1,16 @@
+node_modules/
+dist/
+dist-server/
+*.db
+*.db-shm
+*.db-wal
+.DS_Store
+*.log
+.env
+.vite/
+coverage/
+
+# Local agent tooling (skills are installed per-machine, not part of the product)
+.claude/
+.agents/
+skills-lock.json

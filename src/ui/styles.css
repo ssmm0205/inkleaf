@@ -1,0 +1,216 @@
+:root {
+  --line: 2.7rem;
+  --ink: #2b3a57;
+  --ink-soft: #6b769033;
+  --paper: #fbf7ec;
+  --red: #d9707c;
+  --desk: #e7e2d6;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+  background: radial-gradient(circle at 30% 10%, #efe9db, var(--desk));
+  font-family: "Nanum Pen Script", cursive;
+  color: var(--ink);
+  display: flex;
+  justify-content: center;
+  padding: clamp(1rem, 4vw, 3rem);
+}
+
+.page {
+  position: relative;
+  width: min(720px, 100%);
+  min-height: 80vh;
+  background: var(--paper);
+  border-radius: 4px;
+  box-shadow:
+    0 1px 0 #fff inset,
+    0 18px 40px -18px rgba(40, 35, 20, 0.45);
+  padding: 2.2rem 2.4rem 7rem 3.6rem;
+  /* faint ruled lines */
+  background-image: repeating-linear-gradient(
+    var(--paper),
+    var(--paper) calc(var(--line) - 1px),
+    var(--ink-soft) calc(var(--line) - 1px),
+    var(--ink-soft) var(--line)
+  );
+  background-position: 0 4.4rem;
+}
+
+.margin-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 2.6rem;
+  width: 2px;
+  background: var(--red);
+  opacity: 0.5;
+}
+
+.masthead {
+  display: flex;
+  align-items: baseline;
+  gap: 0.8rem;
+  height: 4.4rem;
+}
+
+.masthead h1 {
+  font-size: 2.8rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+.status {
+  font-size: 1.1rem;
+  padding: 0.05rem 0.6rem;
+  border-radius: 999px;
+}
+.status.on {
+  color: #2f7d46;
+  background: #2f7d4618;
+}
+.status.off {
+  color: #9a9a9a;
+  background: #9a9a9a18;
+}
+
+.note {
+  list-style: none;
+}
+
+.block,
+.empty {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: var(--line);
+  line-height: var(--line);
+  font-size: 1.9rem;
+}
+
+.empty {
+  opacity: 0.45;
+}
+
+.block .ink {
+  flex: 1;
+  word-break: break-word;
+}
+
+.block.done .ink {
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+  opacity: 0.5;
+}
+
+/* hand-drawn checkbox */
+.checkbox {
+  flex: none;
+  width: 1.7rem;
+  height: 1.7rem;
+  border: 2.5px solid var(--ink);
+  border-radius: 4px 6px 5px 7px / 6px 5px 7px 4px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  transform: rotate(-2deg);
+  transition: transform 0.1s ease;
+  font-family: "Nanum Pen Script", cursive;
+}
+.checkbox:hover {
+  transform: rotate(-2deg) scale(1.08);
+}
+
+.trash {
+  flex: none;
+  border: none;
+  background: none;
+  color: var(--ink);
+  opacity: 0;
+  font-size: 1.6rem;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+.block:hover .trash {
+  opacity: 0.35;
+}
+.trash:hover {
+  opacity: 0.9 !important;
+}
+
+/* composer */
+.composer {
+  position: absolute;
+  left: 3.6rem;
+  right: 2.4rem;
+  bottom: 1.6rem;
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  background: var(--paper);
+  padding-top: 0.6rem;
+}
+.composer input {
+  flex: 1;
+  border: none;
+  border-bottom: 2px dashed var(--ink-soft);
+  background: transparent;
+  font-family: "Nanum Pen Script", cursive;
+  font-size: 1.8rem;
+  color: var(--ink);
+  padding: 0.2rem 0.4rem;
+}
+.composer input:focus {
+  outline: none;
+  border-bottom-color: var(--red);
+}
+.composer button {
+  font-family: "Nanum Pen Script", cursive;
+  font-size: 1.5rem;
+  border: 2px solid var(--ink);
+  border-radius: 8px 10px 9px 12px / 10px 9px 12px 8px;
+  background: transparent;
+  color: var(--ink);
+  padding: 0.2rem 0.9rem;
+  cursor: pointer;
+}
+.composer .mode {
+  white-space: nowrap;
+}
+.composer .write {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+/* the writing animation — a brush sweeps the glyphs left→right (ADR-0003) */
+@keyframes inkwrite {
+  to {
+    -webkit-mask-position: 0% 0;
+    mask-position: 0% 0;
+  }
+}
+.handwrite {
+  -webkit-mask-image: linear-gradient(90deg, #000 0, #000 45%, transparent 62%);
+  mask-image: linear-gradient(90deg, #000 0, #000 45%, transparent 62%);
+  -webkit-mask-size: 280% 100%;
+  mask-size: 280% 100%;
+  -webkit-mask-position: 100% 0;
+  mask-position: 100% 0;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  animation: inkwrite 1.1s steps(30, end) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .handwrite {
+    animation-duration: 0.01s;
+  }
+}
