@@ -1,6 +1,6 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useNotebook } from "./useNotebook";
-import { createBlock, toggleBlock, deleteBlock, type Block } from "./api";
+import { createBlock, toggleBlock, deleteBlock, updateBlock, type Block } from "./api";
 
 export function App() {
   const { blocks, connected, animating, settle } = useNotebook();
@@ -70,6 +70,23 @@ function BlockRow({
   onSettle: () => void;
 }) {
   const isTodo = block.type === "todo";
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(block.text);
+
+  useEffect(() => {
+    if (!editing) setDraft(block.text);
+  }, [block.text, editing]);
+
+  async function commit() {
+    setEditing(false);
+    const next = draft.trim();
+    if (next && next !== block.text) {
+      await updateBlock(block.id, { text: next });
+    } else {
+      setDraft(block.text);
+    }
+  }
+
   return (
     <li className={`block ${isTodo ? "is-todo" : ""} ${block.checked ? "done" : ""}`}>
       {isTodo && (
@@ -81,9 +98,31 @@ function BlockRow({
           {block.checked ? "✓" : ""}
         </button>
       )}
-      <span className={`ink ${animate ? "handwrite" : ""}`} onAnimationEnd={onSettle}>
-        {block.text}
-      </span>
+      {editing ? (
+        <input
+          className="ink edit"
+          value={draft}
+          autoFocus
+          onChange={(event) => setDraft(event.target.value)}
+          onBlur={commit}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") commit();
+            if (event.key === "Escape") {
+              setDraft(block.text);
+              setEditing(false);
+            }
+          }}
+        />
+      ) : (
+        <span
+          className={`ink ${animate ? "handwrite" : ""}`}
+          onAnimationEnd={onSettle}
+          onDoubleClick={() => setEditing(true)}
+          title="더블클릭하여 수정"
+        >
+          {block.text}
+        </span>
+      )}
       <button className="trash" onClick={() => deleteBlock(block.id)} aria-label="삭제">
         ×
       </button>

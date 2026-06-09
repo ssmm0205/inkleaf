@@ -101,6 +101,19 @@ body {
 .block .ink {
   flex: 1;
   word-break: break-word;
+  cursor: text;
+}
+
+.block .ink.edit {
+  border: none;
+  background: transparent;
+  font-family: "Nanum Pen Script", cursive;
+  font-size: 1.9rem;
+  color: var(--ink);
+  padding: 0;
+}
+.block .ink.edit:focus {
+  outline: none;
 }
 
 .block.done .ink {
