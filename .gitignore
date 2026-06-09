@@ -9,6 +9,9 @@ dist-server/
 .env
 .vite/
 coverage/
+test-results/
+playwright-report/
+blob-report/
 
 # Local agent tooling (skills are installed per-machine, not part of the product)
 .claude/
