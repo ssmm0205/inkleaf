@@ -80,6 +80,24 @@ body {
   background: #9a9a9a18;
 }
 
+.gcal {
+  margin-left: auto;
+  font-family: "Nanum Pen Script", cursive;
+  font-size: 1.2rem;
+  border: 2px solid var(--ink);
+  border-radius: 7px 9px 8px 10px / 9px 8px 10px 7px;
+  background: transparent;
+  color: var(--ink);
+  padding: 0.05rem 0.7rem;
+  cursor: pointer;
+}
+.gcal.on {
+  border: none;
+  color: #2f7d46;
+  background: #2f7d4618;
+  cursor: default;
+}
+
 .note {
   list-style: none;
 }

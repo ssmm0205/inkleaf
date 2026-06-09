@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join, normalize, resolve } from "node:path";
 import type { BlockStore, BlockType } from "./blocks.js";
+import type { GoogleAuth } from "./google/oauth.js";
 
 const DIST = resolve(process.cwd(), "dist");
 
@@ -34,7 +35,7 @@ async function readJsonBody(req: IncomingMessage): Promise<Record<string, unknow
  * server (agent edits) call these endpoints; the store emits changes that the
  * websocket hub then broadcasts.
  */
-export function createApi(store: BlockStore) {
+export function createApi(store: BlockStore, googleAuth?: GoogleAuth) {
   return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     const url = new URL(req.url ?? "/", "http://localhost");
     const path = url.pathname;
@@ -42,6 +43,37 @@ export function createApi(store: BlockStore) {
 
     try {
       if (path === "/api/health") return sendJson(res, 200, { ok: true });
+
+      if (path === "/api/google/status" && method === "GET") {
+        return sendJson(res, 200, {
+          enabled: Boolean(googleAuth),
+          connected: googleAuth?.isConnected() ?? false,
+          lastSyncAt: store.getSyncState("tasksUpdatedMin") ?? null,
+        });
+      }
+
+      if (path === "/api/google/auth-url" && method === "GET") {
+        if (!googleAuth) return sendJson(res, 400, { error: "Google not configured" });
+        return sendJson(res, 200, { url: googleAuth.getAuthUrl() });
+      }
+
+      if (path === "/api/google/callback" && method === "GET") {
+        if (!googleAuth) return sendJson(res, 400, { error: "Google not configured" });
+        const code = url.searchParams.get("code");
+        const oauthError = url.searchParams.get("error");
+        res.writeHead(oauthError || !code ? 400 : 200, {
+          "content-type": "text/html; charset=utf-8",
+        });
+        if (oauthError || !code) {
+          res.end(`<!doctype html><meta charset="utf-8"><h2>인증 실패: ${oauthError ?? "no code"}</h2>`);
+          return;
+        }
+        await googleAuth.exchangeCode(code);
+        res.end(
+          `<!doctype html><meta charset="utf-8"><body style="font-family:sans-serif;padding:3rem"><h2>🍃 Google 연동 완료!</h2><p>이 창을 닫고 노트로 돌아가세요.</p><script>setTimeout(()=>window.close(),1500)</script></body>`,
+        );
+        return;
+      }
 
       if (path === "/api/blocks" && method === "GET") {
         return sendJson(res, 200, store.list());

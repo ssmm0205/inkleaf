@@ -24,6 +24,7 @@ export interface Block {
 }
 
 export interface CreateBlockInput {
+  id?: string;
   noteId?: string;
   type?: BlockType;
   text: string;
@@ -42,6 +43,14 @@ export type BlockChangeKind = "created" | "updated" | "deleted";
 export interface BlockChange {
   kind: BlockChangeKind;
   block: Block;
+}
+
+/** Per-Block linkage to its Google counterpart (kept off the public Block). */
+export interface SyncMeta {
+  googleTaskId: string | null;
+  googleEventId: string | null;
+  remoteUpdatedAt: number | null;
+  syncedAt: number | null;
 }
 
 interface BlockRow {
@@ -95,7 +104,28 @@ export class BlockStore extends EventEmitter {
         updated_at INTEGER NOT NULL
       );
       CREATE INDEX IF NOT EXISTS idx_blocks_note ON blocks (note_id, position);
+      CREATE TABLE IF NOT EXISTS sync_state (
+        key   TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      );
     `);
+    // Idempotent column adds for Google sync metadata (CREATE TABLE IF NOT
+    // EXISTS won't alter an existing table, so add columns explicitly).
+    this.addColumn("starts_at", "INTEGER");
+    this.addColumn("ends_at", "INTEGER");
+    this.addColumn("google_task_id", "TEXT");
+    this.addColumn("google_event_id", "TEXT");
+    this.addColumn("remote_updated_at", "INTEGER");
+    this.addColumn("synced_at", "INTEGER");
+  }
+
+  private addColumn(name: string, type: string): void {
+    const cols = this.db.prepare("PRAGMA table_info(blocks)").all() as Array<{
+      name: string;
+    }>;
+    if (!cols.some((c) => c.name === name)) {
+      this.db.exec(`ALTER TABLE blocks ADD COLUMN ${name} ${type}`);
+    }
   }
 
   /** Subscribe to mutations. Returns an unsubscribe function. */
@@ -128,7 +158,7 @@ export class BlockStore extends EventEmitter {
     const noteId = input.noteId ?? DEFAULT_NOTE_ID;
     const now = Date.now();
     const block: Block = {
-      id: crypto.randomUUID(),
+      id: input.id ?? crypto.randomUUID(),
       noteId,
       type: input.type ?? "text",
       text: input.text,
@@ -184,6 +214,78 @@ export class BlockStore extends EventEmitter {
     this.db.prepare("DELETE FROM blocks WHERE id = ?").run(id);
     this.emitChange("deleted", existing);
     return existing;
+  }
+
+  // --- Google sync metadata (does NOT emit change events or bump updatedAt) ---
+
+  findByGoogleTaskId(googleTaskId: string): Block | undefined {
+    const row = this.db
+      .prepare("SELECT * FROM blocks WHERE google_task_id = ?")
+      .get(googleTaskId) as BlockRow | undefined;
+    return row ? rowToBlock(row) : undefined;
+  }
+
+  findByGoogleEventId(googleEventId: string): Block | undefined {
+    const row = this.db
+      .prepare("SELECT * FROM blocks WHERE google_event_id = ?")
+      .get(googleEventId) as BlockRow | undefined;
+    return row ? rowToBlock(row) : undefined;
+  }
+
+  getSyncMeta(blockId: string): SyncMeta | undefined {
+    const row = this.db
+      .prepare(
+        "SELECT google_task_id, google_event_id, remote_updated_at, synced_at FROM blocks WHERE id = ?",
+      )
+      .get(blockId) as
+      | {
+          google_task_id: string | null;
+          google_event_id: string | null;
+          remote_updated_at: number | null;
+          synced_at: number | null;
+        }
+      | undefined;
+    if (!row) return undefined;
+    return {
+      googleTaskId: row.google_task_id ?? null,
+      googleEventId: row.google_event_id ?? null,
+      remoteUpdatedAt: row.remote_updated_at ?? null,
+      syncedAt: row.synced_at ?? null,
+    };
+  }
+
+  setSyncMeta(blockId: string, meta: Partial<SyncMeta>): void {
+    const columns: Record<keyof SyncMeta, string> = {
+      googleTaskId: "google_task_id",
+      googleEventId: "google_event_id",
+      remoteUpdatedAt: "remote_updated_at",
+      syncedAt: "synced_at",
+    };
+    const sets: string[] = [];
+    const params: Record<string, unknown> = { id: blockId };
+    for (const key of Object.keys(meta) as Array<keyof SyncMeta>) {
+      sets.push(`${columns[key]} = @${key}`);
+      params[key] = meta[key] ?? null;
+    }
+    if (sets.length === 0) return;
+    this.db
+      .prepare(`UPDATE blocks SET ${sets.join(", ")} WHERE id = @id`)
+      .run(params);
+  }
+
+  getSyncState(key: string): string | undefined {
+    const row = this.db
+      .prepare("SELECT value FROM sync_state WHERE key = ?")
+      .get(key) as { value: string } | undefined;
+    return row?.value;
+  }
+
+  setSyncState(key: string, value: string): void {
+    this.db
+      .prepare(
+        "INSERT INTO sync_state (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+      )
+      .run(key, value);
   }
 
   private requireBlock(id: string): Block {

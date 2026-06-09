@@ -70,4 +70,10 @@ describe("REST API", () => {
     const { status } = await api("/api/blocks/ghost/toggle", { method: "POST" });
     expect(status).toBe(400);
   });
+
+  it("reports Google sync disabled when no credentials are configured", async () => {
+    const { status, body } = await api("/api/google/status");
+    expect(status).toBe(200);
+    expect(body).toMatchObject({ enabled: false, connected: false });
+  });
 });

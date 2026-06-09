@@ -43,6 +43,7 @@ The design decisions behind this are recorded as ADRs:
 - [ADR-0001](./docs/adr/0001-connect-via-mcp-not-agent-sdk.md) — connect via **MCP**, not an embedded Agent SDK (subscription, no API key)
 - [ADR-0002](./docs/adr/0002-handwriting-is-a-skin-not-ink.md) — **handwriting is a skin** over structured Blocks, not real ink
 - [ADR-0003](./docs/adr/0003-writing-animation-via-mask-reveal-not-stroke-order.md) — the **writing animation** is mask-reveal, not true stroke order
+- [ADR-0004](./docs/adr/0004-native-two-way-google-sync.md) — **native two-way Google Tasks/Calendar sync** over the primary account (opt-in via OAuth)
 
 The project's domain language lives in [CONTEXT.md](./CONTEXT.md).
 

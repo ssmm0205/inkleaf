@@ -98,3 +98,53 @@ describe("BlockStore", () => {
     expect(events[3].block.id).toBe(a.id);
   });
 });
+
+describe("BlockStore sync metadata", () => {
+  let store: BlockStore;
+  beforeEach(() => {
+    store = freshStore();
+  });
+
+  it("round-trips key/value sync state", () => {
+    expect(store.getSyncState("calendarSyncToken")).toBeUndefined();
+    store.setSyncState("calendarSyncToken", "abc123");
+    expect(store.getSyncState("calendarSyncToken")).toBe("abc123");
+    store.setSyncState("calendarSyncToken", "def456");
+    expect(store.getSyncState("calendarSyncToken")).toBe("def456");
+  });
+
+  it("stores and reads per-Block Google linkage", () => {
+    const block = store.create({ type: "todo", text: "linked" });
+    store.setSyncMeta(block.id, {
+      googleTaskId: "gtask-1",
+      remoteUpdatedAt: 1000,
+      syncedAt: 2000,
+    });
+    const meta = store.getSyncMeta(block.id);
+    expect(meta).toEqual({
+      googleTaskId: "gtask-1",
+      googleEventId: null,
+      remoteUpdatedAt: 1000,
+      syncedAt: 2000,
+    });
+    expect(store.findByGoogleTaskId("gtask-1")?.id).toBe(block.id);
+    expect(store.findByGoogleTaskId("nope")).toBeUndefined();
+  });
+
+  it("does NOT emit a change event when writing sync metadata", () => {
+    const block = store.create({ type: "todo", text: "quiet" });
+    const events: BlockChange[] = [];
+    store.onChange((c) => events.push(c));
+    store.setSyncMeta(block.id, { googleTaskId: "gtask-2" });
+    expect(events).toHaveLength(0);
+  });
+
+  it("migrates idempotently when opened twice on the same db", () => {
+    const db = new Database(":memory:");
+    const first = new BlockStore(db);
+    const a = first.create({ text: "kept" });
+    // Re-opening (second migrate pass) must not throw or lose data.
+    const second = new BlockStore(db);
+    expect(second.get(a.id)?.text).toBe("kept");
+  });
+});

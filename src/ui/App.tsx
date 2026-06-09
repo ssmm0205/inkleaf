@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useNotebook } from "./useNotebook";
 import { createBlock, toggleBlock, deleteBlock, updateBlock, type Block } from "./client";
 
@@ -23,6 +23,7 @@ export function App() {
         <span className={`status ${connected ? "on" : "off"}`}>
           {connected ? "live" : "offline"}
         </span>
+        <GoogleBadge />
       </header>
 
       <ul className="note">
@@ -127,5 +128,48 @@ function BlockRow({
         ×
       </button>
     </li>
+  );
+}
+
+interface GoogleStatus {
+  enabled: boolean;
+  connected: boolean;
+}
+
+function GoogleBadge() {
+  const [status, setStatus] = useState<GoogleStatus | null>(null);
+
+  const refresh = useCallback(async () => {
+    try {
+      const res = await fetch("/api/google/status");
+      setStatus(await res.json());
+    } catch {
+      setStatus(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  if (!status?.enabled) return null;
+  if (status.connected) return <span className="gcal on">Google ✓</span>;
+
+  async function connect() {
+    const { url } = await (await fetch("/api/google/auth-url")).json();
+    window.open(url, "_blank", "width=520,height=660");
+    const poll = setInterval(async () => {
+      const next: GoogleStatus = await (await fetch("/api/google/status")).json();
+      if (next.connected) {
+        setStatus(next);
+        clearInterval(poll);
+      }
+    }, 2000);
+  }
+
+  return (
+    <button className="gcal" onClick={connect}>
+      Google 연동
+    </button>
   );
 }
